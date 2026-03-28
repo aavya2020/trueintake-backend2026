@@ -1,0 +1,98 @@
+category_code,nutrient,unit_raw,unit,min_label_claim,max_label_claim,pred_pct_intercept,pred_pct_linear_coeff,pred_pct_quadratic_coeff
+01,Calcium,mg/Serving,mg,25.0,512.0,32.96,-0.1533,0.0002273
+01,Copper,mg/Serving,mg,0.07,5.0,8.953,0.0,0.0
+01,Folic Acid,mcg/Serving,mcg,50.0,800.0,13.16,0.0,0.0
+01,Iodine,mcg/Serving,mcg,15.0,200.0,26.23,0.0,0.0
+01,Iron,mg/Serving,mg,0.8,25.0,18.64,-2.874,0.105
+01,Magnesium,mg/Serving,mg,10.0,400.0,3.355,0.0,0.0
+01,Manganese,mg/Serving,mg,0.12,7.5,6.255,0.0,0.0
+01,Niacin,mg/Serving,mg,9.0,150.0,1.518,0.0,0.0
+01,Phosphorus,mg/Serving,mg,31.0,350.0,8.133,0.0,0.0
+01,Potassium,mg/Serving,mg,25.0,100.0,8.715,0.0,0.0
+01,Riboflavin,mg/Serving,mg,0.2,150.0,11.12,0.0,0.0
+01,Selenium,mcg/Serving,mcg,10.0,200.0,24.58,0.0,0.0
+01,Thiamin,mg/Serving,mg,0.2,150.0,-6.241,0.09756,0.0
+01,Vitamin B-12,mcg/Serving,mcg,1.0,200.0,8.954,0.0,0.0
+01,Vitamin B-6,mg/Serving,mg,1.0,150.0,4.733,-0.2865,0.002595
+01,Vitamin C,mg/Serving,mg,4.0,1000.0,8.311,0.0,0.0
+01,Vitamin E,IU/Serving,IU,9.0,360.0,5.423,0.0,0.0
+01,Zinc,mg/Serving,mg,0.401,40.0,8.154,-0.251,0.0
+02,Calcium,mg/Serving,mg,20.0,200.0,33.18,-0.1408,0.0
+02,Copper,mg/Serving,mg,0.05,2.0,6.385,0.0,0.0
+02,Folic Acid,mcg/Serving,mcg,10.0,400.0,17.48,0.0,0.0
+02,Iodine,mcg/Serving,mcg,12.8,150.0,86.64,-1.806,0.0093
+02,Iron,mg/Serving,mg,2.0,18.0,14.1,-0.6712,0.0
+02,Magnesium,mg/Serving,mg,8.0,80.0,4.509,0.0,0.0
+02,Niacin,mg/Serving,mg,2.5,25.0,6.49,0.0,0.0
+02,Phosphorus,mg/Serving,mg,15.0,100.0,17.71,-0.1471,0.0
+02,Riboflavin,mg/Serving,mg,0.85,5.0,6.145,0.0,0.0
+02,Thiamin,mg/Serving,mg,0.75,5.0,8.572,0.0,0.0
+02,Vitamin A,IU/Serving,IU,1500.0,5000.0,37.49,-0.007097,0.0
+02,Vitamin B-12,mcg/Serving,mcg,3.0,10.0,15.42,0.0,0.0
+02,Vitamin B-6,mg/Serving,mg,0.5,5.0,22.63,-12.61,2.268
+02,Vitamin D,IU/Serving,IU,50.0,400.0,36.05,0.0,0.0
+02,Vitamin E,IU/Serving,IU,7.5,40.0,50.31,-1.328,0.0
+02,Zinc,mg/Serving,mg,2.0,16.0,30.47,-5.881,0.2824
+02A,Calcium,mg/Serving,mg,15.0,100.0,36.37,-0.3223,0.0
+02A,Copper,mg/Serving,mg,0.05,1.0,5.112,0.0,0.0
+02A,Folic Acid,mcg/Serving,mcg,100.0,300.0,19.42,0.0,0.0
+02A,Iodine,mcg/Serving,mcg,20.0,100.0,48.34,-0.4,0.0
+02A,Iron,mg/Serving,mg,3.0,9.0,3.355,0.0,0.0
+02A,Magnesium,mg/Serving,mg,5.0,40.0,3.894,0.0,0.0
+02A,Niacin,mg/Serving,mg,1.5,20.0,6.035,0.0,0.0
+02A,Phosphorus,mg/Serving,mg,7.5,50.0,19.49,-0.3333,0.0
+02A,Riboflavin,mg/Serving,mg,0.6,2.5,4.263,0.0,0.0
+02A,Thiamin,mg/Serving,mg,0.525,2.5,11.17,0.0,0.0
+02A,Vitamin A,IU/Serving,IU,1000.0,2500.0,13.91,0.0,0.0
+02A,Vitamin B-12,mcg/Serving,mcg,1.5,6.0,15.8,0.0,0.0
+02A,Vitamin B-6,mg/Serving,mg,0.5,2.5,19.0,-10.23,0.0
+02A,Vitamin D,IU/Serving,IU,25.0,400.0,38.69,0.0,0.0
+02A,Vitamin E,IU/Serving,IU,5.0,39.0,20.31,0.0,0.0
+02A,Zinc,mg/Serving,mg,1.25,8.0,15.13,-5.937,0.5958
+03,Calcium,mg/Serving,mg,30.0,1300.0,14.8,-0.01476,0.0
+03,Chromium,mcg/Serving,mcg,20.0,225.0,92.88,-0.3693,0.0
+03,Copper,mg/Serving,mg,0.1,3.0,8.613,0.0,0.0
+03,Folic Acid,mcg/Serving,mcg,200.0,1000.0,0.3166,0.0,0.0
+03,Iodine,mcg/Serving,mcg,10.0,300.0,25.96,0.0,0.0
+03,Iron,mg/Serving,mg,9.0,50.0,1.173,0.0,0.0
+03,Magnesium,mg/Serving,mg,10.0,650.0,3.282,0.0,0.0
+03,Manganese,mg/Serving,mg,0.5,15.0,6.729,0.0,0.0
+03,Niacin,mg/Serving,mg,8.0,122.0,2.693,-0.159,0.0
+03,Potassium,mg/Serving,mg,0.835,152.0,20.2,0.0,0.0
+03,Selenium,mg/Serving,mg,3.0,225.0,13.23,0.0,0.0
+03,Riboflavin,mg/Serving,mg,1.4,60.0,0.8673,0.0,0.0
+03,Thiamin,mg/Serving,mg,1.4,68.0,-8.881,0.0,0.0
+03,Vitamin A,IU/Serving,IU,2000.0,17000.0,2.129,0.0,0.0
+03,Vitamin B-12,mcg/Serving,mcg,2.0,800.0,3.763,-0.1275,0.0001647
+03,Vitamin B-6,mg/Serving,mg,1.0,110.0,-3.09,0.0,0.0
+03,Vitamin C,mg/Serving,mg,32.0,360.0,3.266,0.0,0.0
+03,Vitamin D,IU/Serving,IU,100.0,1000.0,12.37,0.0,0.0
+03,Vitamin E,IU/Serving,IU,11.0,200.0,5.385,0.0,0.0
+03,Zinc,mg/Serving,mg,7.0,32.0,10.92,-0.4726,0.0
+04,DHA,mg/Serving,mg,45.0,800.0,-1.721,0.0,0.0
+04,EPA,mg/Serving,mg,70.0,750.0,-5.411,0.0,0.0
+04,ALA,mg/Serving,mg,200.0,7000.0,8.652,-0.012,1.584e-06
+04A,DHA,mg/Day,mg,90.0,1440.0,-1.721,0.0,0.0
+04A,EPA,mg/Day,mg,140.0,2160.0,-5.531,0.0,0.0
+04A,ALA,mg/Day,mg,350.0,7000.0,0.2464,0.0,0.0
+05,Calcium,mg/ Serving,mg,20.0,500.0,8.105,0.0,0.0
+05,Chromium,mcg /Serving,mcg,10.0,250.0,30.21,-0.08214,0.0
+05,Copper,mg /Serving,mg,0.3,3.5,16.96,-5.241,0.0
+05,Iodine,mcg /Serving,mcg,40.0,225.0,20.13,0.0,0.0
+05,Iron,mg /Serving,mg,0.8,28.0,0.8363,0.0,0.0
+05,Magnesium,mg /Serving,mg,20.0,400.0,-0.2109,0.0,0.0
+05,Manganese,mg /Serving,mg,0.5,7.5,15.47,-5.277,0.6297
+05,Phosphorus,mg /Serving,mg,20.0,130.0,18.67,-0.1736,0.0
+05,Potassium,mg /Serving,mg,50.0,100.0,-8.7,0.14,0.0
+05,Selenium,mcg /Serving,mcg,20.0,250.0,27.78,-0.07132,0.0
+05,Zinc,mg /Serving,mg,1.5,42.3,13.3,-0.9114,0.02191
+05,Folic Acid,mcg /Serving,mcg,12.5,900.0,9.644,0.08493,-0.0001253
+05,Niacin,mg /Serving,mg,5.0,200.0,4.479,0.0,0.0
+05,Riboflavin,mg /Serving,mg,0.2,80.0,18.89,-0.864,0.01051
+05,Thiamin,mg /Serving,mg,0.2,125.0,-3.484,0.0,0.0
+05,"Vitamin A, IU",IU/ Serving,IU,1000.0,20000.0,60.75,-0.01173,4.948e-07
+05,Vitamin B-12,mcg /Serving,mcg,1.0,250.0,21.8,0.0,0.0
+05,Vitamin B-6,mg /Serving,mg,0.3,100.0,9.102,0.0,0.0
+05,Vitamin C,mg /Serving,mg,4.0,1290.0,5.086,0.0,0.0
+05,Vitamin D,IU/ Serving,IU,15.0,2000.0,45.78,-0.01304,0.0
+05,Vitamin E,IU /Serving,IU,15.0,400.0,9.408,0.0,0.0
