@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 APP_TITLE = "TrueIntake AI Backend"
 APP_VERSION = "0.2.0"
 FDC_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
+DSLD_BASE_URL = "https://dsld.od.nih.gov/api"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 DEFAULT_FDC_DATA_TYPES = ["Foundation", "Branded", "SR Legacy", "Survey (FNDDS)"]
 
@@ -112,12 +113,14 @@ UNIT_FACTORS_TO_CANONICAL: Dict[str, Dict[str, float]] = {
     "iu": {"iu": 1.0},
 }
 
+
 class PredictSupplementRequest(BaseModel):
     category: str
     nutrient: str
     label_claim: float = Field(..., ge=0)
     unit: str
     servings_per_day: float = Field(default=1.0, gt=0)
+
 
 class SupplementItem(BaseModel):
     category: str
@@ -126,28 +129,35 @@ class SupplementItem(BaseModel):
     unit: str
     servings_per_day: float = Field(default=1.0, gt=0)
 
+
 class FoodItem(BaseModel):
     fdc_id: int
     grams: float = Field(default=100.0, gt=0)
 
+
 class CalculateTotalIntakeRequest(BaseModel):
     supplements: List[SupplementItem] = Field(default_factory=list)
     foods: List[FoodItem] = Field(default_factory=list)
+
 
 class HealthResponse(BaseModel):
     status: str
     app: str
     version: str
 
+
 def normalize_text(value: str) -> str:
     return " ".join(str(value).strip().lower().replace("-", " ").replace(",", "").split())
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Dict[str, str]:
     return {
         "fdc_api_key": os.getenv("FDC_API_KEY", "").strip(),
         "dsid_model_csv": os.getenv("DSID_MODEL_CSV", "./data/dsid_models.csv").strip(),
+        "dsld_api_key": os.getenv("DSLD_API_KEY", "").strip(),
     }
+
 
 @lru_cache(maxsize=1)
 def load_dsid_models() -> pd.DataFrame:
@@ -176,6 +186,7 @@ def load_dsid_models() -> pd.DataFrame:
     df["unit_norm"] = df["unit"].astype(str).map(normalize_text)
     return df
 
+
 def resolve_canonical_nutrient(input_name: str) -> Dict[str, Any]:
     raw = normalize_text(input_name)
     for data in NUTRIENT_SYNONYMS.values():
@@ -188,6 +199,7 @@ def resolve_canonical_nutrient(input_name: str) -> Dict[str, Any]:
         "aliases": [input_name.strip()],
         "fdc_names": [input_name.strip()],
     }
+
 
 def convert_amount(value: float, from_unit: str, to_unit: str) -> float:
     from_unit_norm = normalize_text(from_unit)
@@ -202,6 +214,7 @@ def convert_amount(value: float, from_unit: str, to_unit: str) -> float:
         raise ValueError(f"Cannot convert from {from_unit} to {to_unit}")
 
     return value * UNIT_FACTORS_TO_CANONICAL[to_unit_norm][from_unit_norm]
+
 
 def get_model_row(category: str, nutrient: str) -> pd.Series:
     models = load_dsid_models()
@@ -225,6 +238,7 @@ def get_model_row(category: str, nutrient: str) -> pd.Series:
         )
 
     return match.iloc[0]
+
 
 def predict_from_model(category: str, nutrient: str, label_claim: float, unit: str, servings_per_day: float) -> Dict[str, Any]:
     row = get_model_row(category, nutrient)
@@ -277,6 +291,7 @@ def predict_from_model(category: str, nutrient: str, label_claim: float, unit: s
         },
     }
 
+
 async def fdc_get(path: str, params: Optional[Dict[str, Any]] = None) -> Any:
     api_key = get_settings()["fdc_api_key"]
     if not api_key:
@@ -294,6 +309,26 @@ async def fdc_get(path: str, params: Optional[Dict[str, Any]] = None) -> Any:
             detail={"message": "FoodData Central request failed", "fdc_response": response.text},
         )
     return response.json()
+
+
+async def dsld_get(path: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    api_key = get_settings()["dsld_api_key"]
+    if not api_key:
+        raise HTTPException(status_code=500, detail="DSLD_API_KEY is not set on the server.")
+
+    merged_params = dict(params or {})
+    merged_params["api_key"] = api_key
+
+    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT_SECONDS) as client:
+        response = await client.get(f"{DSLD_BASE_URL}{path}", params=merged_params)
+
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail={"message": "DSLD request failed", "dsld_response": response.text},
+        )
+    return response.json()
+
 
 async def search_fdc_foods(query: str, page_size: int = 10, page_number: int = 1) -> Dict[str, Any]:
     api_key = get_settings()["fdc_api_key"]
@@ -323,11 +358,13 @@ async def search_fdc_foods(query: str, page_size: int = 10, page_number: int = 1
         )
     return response.json()
 
+
 async def get_food_details(fdc_id: int) -> Dict[str, Any]:
     data = await fdc_get(f"/food/{fdc_id}", params={"format": "full"})
     if not isinstance(data, dict):
         raise HTTPException(status_code=502, detail="Unexpected FoodData Central response format.")
     return data
+
 
 def extract_food_nutrients(food_data: Dict[str, Any], grams: float = 100.0) -> List[Dict[str, Any]]:
     scaling_factor = grams / 100.0
@@ -352,6 +389,7 @@ def extract_food_nutrients(food_data: Dict[str, Any], grams: float = 100.0) -> L
         )
 
     return results
+
 
 def accumulate_nutrient(
     totals: Dict[str, Dict[str, Any]],
@@ -387,6 +425,7 @@ def accumulate_nutrient(
 
     bucket["total"] = bucket["from_food"] + bucket["from_supplement"]
 
+
 def match_fdc_nutrients_to_canonical(food_nutrients: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     matched: List[Dict[str, Any]] = []
 
@@ -407,19 +446,23 @@ def match_fdc_nutrients_to_canonical(food_nutrients: List[Dict[str, Any]]) -> Li
 
     return matched
 
+
 @app.get("/", response_model=HealthResponse)
 async def root() -> HealthResponse:
     return HealthResponse(status="ok", app=APP_TITLE, version=APP_VERSION)
 
+
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     return HealthResponse(status="ok", app=APP_TITLE, version=APP_VERSION)
+
 
 @app.get("/categories")
 async def list_categories() -> Dict[str, Any]:
     models = load_dsid_models()
     categories = sorted(models["category_code"].dropna().astype(str).unique().tolist())
     return {"categories": categories}
+
 
 @app.get("/nutrients")
 async def list_nutrients(category: Optional[str] = None) -> Dict[str, Any]:
@@ -428,6 +471,7 @@ async def list_nutrients(category: Optional[str] = None) -> Dict[str, Any]:
         models = models[models["category_norm"] == normalize_text(category)]
     nutrients = sorted(models["nutrient"].dropna().astype(str).unique().tolist())
     return {"nutrients": nutrients}
+
 
 @app.post("/predict-supplement")
 async def predict_supplement(request: PredictSupplementRequest) -> Dict[str, Any]:
@@ -438,6 +482,7 @@ async def predict_supplement(request: PredictSupplementRequest) -> Dict[str, Any
         unit=request.unit,
         servings_per_day=request.servings_per_day,
     )
+
 
 @app.get("/search-food")
 async def search_food(
@@ -469,6 +514,7 @@ async def search_food(
         "foods": foods,
     }
 
+
 @app.get("/food-details/{fdc_id}")
 async def food_details(fdc_id: int, grams: float = Query(default=100.0, gt=0)) -> Dict[str, Any]:
     data = await get_food_details(fdc_id)
@@ -483,6 +529,7 @@ async def food_details(fdc_id: int, grams: float = Query(default=100.0, gt=0)) -
         "matched_nutrients": matched,
         "all_nutrients": extracted,
     }
+
 
 @app.post("/calculate-total-intake")
 async def calculate_total_intake(request: CalculateTotalIntakeRequest) -> Dict[str, Any]:
@@ -543,4 +590,60 @@ async def calculate_total_intake(request: CalculateTotalIntakeRequest) -> Dict[s
         "supplement_results": supplement_results,
         "food_results": food_results,
         "totals": sorted_totals,
+    }
+
+
+@app.get("/dsld-search")
+async def dsld_search(
+    query: str = Query(..., min_length=2),
+    page_size: int = Query(default=10, ge=1, le=25),
+) -> Dict[str, Any]:
+    data = await dsld_get(
+        "/search",
+        params={
+            "q": query,
+            "pageSize": page_size,
+        },
+    )
+
+    raw_results = data.get("results", []) if isinstance(data, dict) else []
+    results: List[Dict[str, Any]] = []
+
+    for item in raw_results[:page_size]:
+        results.append(
+            {
+                "id": item.get("id") or item.get("_id") or item.get("product_id"),
+                "name": item.get("product_name") or item.get("name") or item.get("full_name"),
+                "brand": item.get("brand_name") or item.get("brand"),
+                "serving_size": item.get("serving_size"),
+                "serving_size_unit": item.get("serving_size_unit"),
+            }
+        )
+
+    return {
+        "query": query,
+        "count": len(results),
+        "results": results,
+        "raw_total": data.get("total") if isinstance(data, dict) else None,
+    }
+
+
+@app.get("/dsld-product/{product_id}")
+async def dsld_product(product_id: str) -> Dict[str, Any]:
+    data = await dsld_get(f"/product/{product_id}")
+
+    if not isinstance(data, dict):
+        return {"product_id": product_id, "raw": data}
+
+    product = data.get("product", data)
+
+    return {
+        "product_id": product_id,
+        "name": product.get("product_name") or product.get("name"),
+        "brand": product.get("brand_name") or product.get("brand"),
+        "serving_size": product.get("serving_size"),
+        "serving_size_unit": product.get("serving_size_unit"),
+        "ingredients": product.get("ingredients", []),
+        "label_statements": product.get("label_statements", []),
+        "raw": data,
     }
