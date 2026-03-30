@@ -319,15 +319,51 @@ async def dsld_get(path: str, params: Optional[Dict[str, Any]] = None) -> Any:
     merged_params = dict(params or {})
     merged_params["api_key"] = api_key
 
-    async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT_SECONDS) as client:
+    async with httpx.AsyncClient(
+        timeout=DEFAULT_TIMEOUT_SECONDS,
+        follow_redirects=True,
+    ) as client:
         response = await client.get(f"{DSLD_BASE_URL}{path}", params=merged_params)
+
+    content_type = response.headers.get("content-type", "")
+    text_preview = response.text[:500]
 
     if response.status_code >= 400:
         raise HTTPException(
             status_code=response.status_code,
-            detail={"message": "DSLD request failed", "dsld_response": response.text},
+            detail={
+                "message": "DSLD request failed",
+                "status_code": response.status_code,
+                "content_type": content_type,
+                "response_preview": text_preview,
+                "url": str(response.url),
+            },
         )
-    return response.json()
+
+    if "application/json" not in content_type.lower():
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "DSLD returned non-JSON response",
+                "content_type": content_type,
+                "response_preview": text_preview,
+                "url": str(response.url),
+            },
+        )
+
+    try:
+        return response.json()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "Failed to decode DSLD JSON response",
+                "content_type": content_type,
+                "response_preview": text_preview,
+                "url": str(response.url),
+                "error": str(exc),
+            },
+        )
 
 
 async def search_fdc_foods(query: str, page_size: int = 10, page_number: int = 1) -> Dict[str, Any]:
