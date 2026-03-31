@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 APP_TITLE = "TrueIntake AI Backend"
 APP_VERSION = "0.2.0"
 FDC_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
-DSLD_BASE_URL = "https://dsld.od.nih.gov/api"
+DSLD_BASE_URL = "https://dsld.od.nih.gov/dsld/v9"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 DEFAULT_FDC_DATA_TYPES = ["Foundation", "Branded", "SR Legacy", "Survey (FNDDS)"]
 
@@ -631,55 +631,68 @@ async def calculate_total_intake(request: CalculateTotalIntakeRequest) -> Dict[s
 
 @app.get("/dsld-search")
 async def dsld_search(
-    query: str = Query(..., min_length=2),
+    query: str = Query(..., min_length=1),
     page_size: int = Query(default=10, ge=1, le=25),
 ) -> Dict[str, Any]:
+    # Using browse-products because the official API guide snippet shows this family of endpoints.
+    # We are using method=full_text as a best-fit guess for free-text product lookup.
     data = await dsld_get(
-        "/search",
+        "/browse-products/",
         params={
+            "method": "full_text",
             "q": query,
-            "pageSize": page_size,
+            "limit": page_size,
         },
     )
 
-    raw_results = data.get("results", []) if isinstance(data, dict) else []
-    results: List[Dict[str, Any]] = []
-
-    for item in raw_results[:page_size]:
-        results.append(
-            {
-                "id": item.get("id") or item.get("_id") or item.get("product_id"),
-                "name": item.get("product_name") or item.get("name") or item.get("full_name"),
-                "brand": item.get("brand_name") or item.get("brand"),
-                "serving_size": item.get("serving_size"),
-                "serving_size_unit": item.get("serving_size_unit"),
-            }
+    # Return raw payload too, so we can inspect exact field names if needed.
+    raw_results = []
+    if isinstance(data, dict):
+        raw_results = (
+            data.get("results")
+            or data.get("data")
+            or data.get("items")
+            or []
         )
+    elif isinstance(data, list):
+        raw_results = data
+
+    results: List[Dict[str, Any]] = []
+    for item in raw_results[:page_size]:
+        if isinstance(item, dict):
+            results.append(
+                {
+                    "id": item.get("id") or item.get("label_id") or item.get("product_id"),
+                    "name": item.get("product_name") or item.get("name") or item.get("full_name") or item.get("title"),
+                    "brand": item.get("brand_name") or item.get("brand"),
+                    "raw": item,
+                }
+            )
 
     return {
         "query": query,
         "count": len(results),
         "results": results,
-        "raw_total": data.get("total") if isinstance(data, dict) else None,
+        "raw": data,
     }
 
 
 @app.get("/dsld-product/{product_id}")
 async def dsld_product(product_id: str) -> Dict[str, Any]:
-    data = await dsld_get(f"/product/{product_id}")
+    # Public product pages on DSLD use /label/{id}; this route tries the likely label-detail API path.
+    data = await dsld_get(f"/label/{product_id}")
 
-    if not isinstance(data, dict):
-        return {"product_id": product_id, "raw": data}
-
-    product = data.get("product", data)
+    if isinstance(data, dict):
+        return {
+            "product_id": product_id,
+            "name": data.get("product_name") or data.get("name") or data.get("title"),
+            "brand": data.get("brand_name") or data.get("brand"),
+            "ingredients": data.get("ingredients", []),
+            "label_statements": data.get("label_statements", []),
+            "raw": data,
+        }
 
     return {
         "product_id": product_id,
-        "name": product.get("product_name") or product.get("name"),
-        "brand": product.get("brand_name") or product.get("brand"),
-        "serving_size": product.get("serving_size"),
-        "serving_size_unit": product.get("serving_size_unit"),
-        "ingredients": product.get("ingredients", []),
-        "label_statements": product.get("label_statements", []),
         "raw": data,
     }
