@@ -634,8 +634,6 @@ async def dsld_search(
     query: str = Query(..., min_length=1),
     page_size: int = Query(default=10, ge=1, le=25),
 ) -> Dict[str, Any]:
-    # Using browse-products because the official API guide snippet shows this family of endpoints.
-    # We are using method=full_text as a best-fit guess for free-text product lookup.
     data = await dsld_get(
         "/browse-products/",
         params={
@@ -645,37 +643,22 @@ async def dsld_search(
         },
     )
 
-    # Return raw payload too, so we can inspect exact field names if needed.
-    raw_results = []
-    if isinstance(data, dict):
-        raw_results = (
-            data.get("results")
-            or data.get("data")
-            or data.get("items")
-            or []
-        )
-    elif isinstance(data, list):
-        raw_results = data
+    raw_hits = data.get("hits", [])
 
-    results: List[Dict[str, Any]] = []
-    for item in raw_results[:page_size]:
-        if isinstance(item, dict):
-            results.append(
-                {
-                    "id": item.get("id") or item.get("label_id") or item.get("product_id"),
-                    "name": item.get("product_name") or item.get("name") or item.get("full_name") or item.get("title"),
-                    "brand": item.get("brand_name") or item.get("brand"),
-                    "raw": item,
-                }
-            )
+    results = []
+    for hit in raw_hits[:page_size]:
+        src = hit.get("_source", {})
+        results.append({
+            "id": hit.get("_id"),
+            "name": src.get("fullName"),
+            "brand": src.get("brandName"),
+        })
 
     return {
         "query": query,
         "count": len(results),
         "results": results,
-        "raw": data,
     }
-
 
 @app.get("/dsld-product/{product_id}")
 async def dsld_product(product_id: str) -> Dict[str, Any]:
