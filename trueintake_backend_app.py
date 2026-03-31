@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 APP_TITLE = "TrueIntake AI Backend"
 APP_VERSION = "0.2.0"
 FDC_BASE_URL = "https://api.nal.usda.gov/fdc/v1"
-DSLD_BASE_URL = "https://dsld.od.nih.gov/dsld/v9"
+DSLD_BASE_URL = "https://api.ods.od.nih.gov/dsld/v9"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 DEFAULT_FDC_DATA_TYPES = ["Foundation", "Branded", "SR Legacy", "Survey (FNDDS)"]
 
@@ -639,7 +639,7 @@ async def dsld_search(
     data = await dsld_get(
         "/browse-products/",
         params={
-            "method": "full_text",
+            "method": "by_keyword",
             "q": query,
             "limit": page_size,
         },
