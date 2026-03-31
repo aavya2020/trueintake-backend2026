@@ -150,6 +150,26 @@ def normalize_text(value: str) -> str:
     return " ".join(str(value).strip().lower().replace("-", " ").replace(",", "").split())
 
 
+def normalize_unit_token(unit: str) -> str:
+    raw = normalize_text(unit)
+    raw = raw.replace(".", "")
+    raw = raw.replace("microgram", "mcg")
+    raw = raw.replace("micrograms", "mcg")
+    raw = raw.replace("milligram", "mg")
+    raw = raw.replace("milligrams", "mg")
+    raw = raw.replace("gram", "g")
+    raw = raw.replace("grams", "g")
+
+    if raw in {"mcg dfe", "mcg dietary folate equivalents"}:
+        return "mcg_dfe"
+    if raw in {"iu", "i u", "iu(s)"}:
+        return "iu"
+    if raw in {"calories", "calorie", "kcal"}:
+        return "kcal"
+
+    return raw
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Dict[str, str]:
     return {
@@ -183,7 +203,7 @@ def load_dsid_models() -> pd.DataFrame:
     df = df.copy()
     df["category_norm"] = df["category_code"].astype(str).map(normalize_text)
     df["nutrient_norm"] = df["nutrient"].astype(str).map(normalize_text)
-    df["unit_norm"] = df["unit"].astype(str).map(normalize_text)
+    df["unit_norm"] = df["unit"].astype(str).map(normalize_unit_token)
     return df
 
 
@@ -201,19 +221,36 @@ def resolve_canonical_nutrient(input_name: str) -> Dict[str, Any]:
     }
 
 
-def convert_amount(value: float, from_unit: str, to_unit: str) -> float:
-    from_unit_norm = normalize_text(from_unit)
-    to_unit_norm = normalize_text(to_unit)
+def convert_amount(value: float, from_unit: str, to_unit: str, nutrient_name: Optional[str] = None) -> float:
+    from_unit_norm = normalize_unit_token(from_unit)
+    to_unit_norm = normalize_unit_token(to_unit)
+    nutrient_norm = normalize_text(nutrient_name or "")
 
     if from_unit_norm == to_unit_norm:
         return value
 
-    if to_unit_norm not in UNIT_FACTORS_TO_CANONICAL:
-        raise ValueError(f"Unsupported target unit conversion: {to_unit}")
-    if from_unit_norm not in UNIT_FACTORS_TO_CANONICAL[to_unit_norm]:
-        raise ValueError(f"Cannot convert from {from_unit} to {to_unit}")
+    if to_unit_norm in UNIT_FACTORS_TO_CANONICAL and from_unit_norm in UNIT_FACTORS_TO_CANONICAL[to_unit_norm]:
+        return value * UNIT_FACTORS_TO_CANONICAL[to_unit_norm][from_unit_norm]
 
-    return value * UNIT_FACTORS_TO_CANONICAL[to_unit_norm][from_unit_norm]
+    if nutrient_norm in {"vitamin d", "vitamin d3", "cholecalciferol"}:
+        if from_unit_norm == "mcg" and to_unit_norm == "iu":
+            return value * 40.0
+        if from_unit_norm == "iu" and to_unit_norm == "mcg":
+            return value / 40.0
+
+    if nutrient_norm in {"vitamin a", "retinol"}:
+        if from_unit_norm == "mcg" and to_unit_norm == "iu":
+            return value / 0.3
+        if from_unit_norm == "iu" and to_unit_norm == "mcg":
+            return value * 0.3
+
+    if nutrient_norm in {"folic acid", "folate"}:
+        if from_unit_norm == "mcg_dfe" and to_unit_norm == "mcg":
+            return value * 0.6
+        if from_unit_norm == "mcg" and to_unit_norm == "mcg_dfe":
+            return value / 0.6
+
+    raise ValueError(f"Cannot convert from {from_unit} to {to_unit} for nutrient {nutrient_name}")
 
 
 def get_model_row(category: str, nutrient: str) -> pd.Series:
@@ -244,7 +281,12 @@ def predict_from_model(category: str, nutrient: str, label_claim: float, unit: s
     row = get_model_row(category, nutrient)
     model_unit = row["unit"]
 
-    converted_label_claim = convert_amount(label_claim, unit, model_unit)
+    converted_label_claim = convert_amount(
+        label_claim,
+        unit,
+        model_unit,
+        nutrient_name=row["nutrient"],
+    )
     min_claim = float(row["min_label_claim"])
     max_claim = float(row["max_label_claim"])
 
@@ -437,10 +479,15 @@ def accumulate_nutrient(
     key = normalize_text(canonical_name)
     nutrient_info = resolve_canonical_nutrient(canonical_name)
     canonical = nutrient_info["canonical"]
-    canonical_unit = nutrient_info["unit"] or unit
+    canonical_unit = nutrient_info["unit"] or normalize_unit_token(unit)
 
     try:
-        converted_amount = convert_amount(amount, unit, canonical_unit)
+        converted_amount = convert_amount(
+            amount,
+            unit,
+            canonical_unit,
+            nutrient_name=canonical_name,
+        )
     except Exception:
         return
 
@@ -648,11 +695,13 @@ async def dsld_search(
     results = []
     for hit in raw_hits[:page_size]:
         src = hit.get("_source", {})
-        results.append({
-            "id": hit.get("_id"),
-            "name": src.get("fullName"),
-            "brand": src.get("brandName"),
-        })
+        results.append(
+            {
+                "id": hit.get("_id"),
+                "name": src.get("fullName"),
+                "brand": src.get("brandName"),
+            }
+        )
 
     return {
         "query": query,
@@ -660,18 +709,18 @@ async def dsld_search(
         "results": results,
     }
 
+
 @app.get("/dsld-product/{product_id}")
 async def dsld_product(product_id: str) -> Dict[str, Any]:
-    # Public product pages on DSLD use /label/{id}; this route tries the likely label-detail API path.
     data = await dsld_get(f"/label/{product_id}")
 
     if isinstance(data, dict):
         return {
             "product_id": product_id,
-            "name": data.get("product_name") or data.get("name") or data.get("title"),
-            "brand": data.get("brand_name") or data.get("brand"),
+            "name": data.get("fullName") or data.get("product_name") or data.get("name") or data.get("title"),
+            "brand": data.get("brandName") or data.get("brand_name") or data.get("brand"),
             "ingredients": data.get("ingredients", []),
-            "label_statements": data.get("label_statements", []),
+            "label_statements": data.get("label_statements", []) or data.get("statements", []),
             "raw": data,
         }
 
